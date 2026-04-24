@@ -26,6 +26,14 @@ function Chunk({ data }: { data: ChunkData }) {
     };
   }, [geometry]);
 
+  // Empty chunks (no triangles) crash rapier with "expected instance
+  // of TA" because TrimeshCollider won't accept a zero-index mesh.
+  // Air chunks are a valid outcome of the voxel mesher — just render
+  // nothing (no collider, no mesh) when the chunk has no geometry.
+  // Placed AFTER all hooks so the rules-of-hooks order is preserved.
+  const hasGeometry = data.indices.length >= 3 && data.positions.length >= 9;
+  if (!hasGeometry) return null;
+
   return (
     <RigidBody type="fixed" colliders={false}>
       {!isVitestBrowser && (
