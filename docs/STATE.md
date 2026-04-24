@@ -1,11 +1,33 @@
 ---
 title: State
-updated: 2026-04-23
+updated: 2026-04-24
 status: in-progress
 domain: context
 ---
 
 # State
+
+## 2026-04-24 update
+
+Since the 2026-04-23 baseline:
+
+- **PR #10** — memory-spike perf patches (Chunk BufferGeometry
+  disposes on unmount, worker onmessage drops zombie responses,
+  Player grapple raycast throttled to ~8Hz + filtered via
+  `userData.raycastable`, per-frame Vector3 allocations hoisted
+  into refs)
+- **PR #9** — empty-chunk guard prevents Rapier crash on zero-index
+  Trimesh; plus real Tailwind + ember-button + spawn safety platform
+  rolled into the same PR
+
+Net effect: the repo was flagged as the most likely memory-spike
+suspect; all critical leaks are patched. A long-session soak test
+is still open (see next-work.md Priority 1).
+
+For decisions and reasons, see
+[docs/agentic/decisions-log.md](agentic/decisions-log.md). For the
+next agent's pickup list, see
+[docs/agentic/next-work.md](agentic/next-work.md).
 
 ## Current baseline
 
