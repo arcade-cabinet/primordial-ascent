@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/arcade-cabinet/primordial-ascent/compare/v0.2.0...v0.3.0) (2026-04-24)
+
+
+### Features
+
+* production polish and cavern signature system ([#14](https://github.com/arcade-cabinet/primordial-ascent/issues/14)) ([383c10e](https://github.com/arcade-cabinet/primordial-ascent/commit/383c10e04a937f1ea99c0ac816c844ffeb15352b))
+
+
+### Documentation
+
+* finalize state and test fixes ([#16](https://github.com/arcade-cabinet/primordial-ascent/issues/16)) ([8e2ac02](https://github.com/arcade-cabinet/primordial-ascent/commit/8e2ac02f78628d65180c7cfa0e125bf877815267))
+
 ## [0.2.0](https://github.com/arcade-cabinet/primordial-ascent/compare/v0.1.0...v0.2.0) (2026-04-24)
 
 
