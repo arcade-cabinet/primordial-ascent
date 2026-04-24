@@ -16,6 +16,7 @@ import * as THREE from "three";
 
 const CAMERA_PITCH = 0.18;
 const UNLOCKED_LOOK_AHEAD = new THREE.Vector3(0, 8, -42);
+const _RAYCAST_CENTER = new THREE.Vector2(0, 0);
 
 export function Player() {
   const { camera, raycaster, scene } = useThree();
@@ -33,6 +34,11 @@ export function Player() {
     jump: false,
     grapple: false,
   });
+  // Reused across frames to avoid per-frame allocations inside useFrame.
+  const raycastAccumRef = useRef(0);
+  const lastGrappleHitRef = useRef<{ distance: number } | null>(null);
+  const cameraDirectionRef = useRef(new THREE.Vector3());
+  const tetherStartRef = useRef(new THREE.Vector3());
   const tetherLineGeometry = useMemo(() => new THREE.BufferGeometry(), []);
   const tetherLine = useMemo(
     () =>
@@ -210,11 +216,27 @@ export function Player() {
     grappleAttempted.current = false;
     position.current.set(currentTrans.x, currentTrans.y, currentTrans.z);
 
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
-    const hit = intersects.find(
-      (i) => i.object.name === "terrain-chunk" && i.distance < CONFIG.maxTetherDist
-    );
+    // Throttle the scene raycast to ~8Hz (125ms). Previously this walked
+    // every mesh in the scene graph every frame, including every terrain
+    // chunk's thousands of triangles. We also filter to meshes flagged
+    // with userData.raycastable so cavern guides/beacons are skipped.
+    raycastAccumRef.current += delta;
+    if (raycastAccumRef.current >= 0.125) {
+      raycastAccumRef.current = 0;
+      raycaster.setFromCamera(_RAYCAST_CENTER, camera);
+      const candidates: THREE.Object3D[] = [];
+      scene.traverse((obj) => {
+        if ((obj as THREE.Mesh).isMesh && obj.userData?.raycastable) {
+          candidates.push(obj);
+        }
+      });
+      const intersects = raycaster.intersectObjects(candidates, false);
+      const nextHit = intersects.find(
+        (i) => i.object.name === "terrain-chunk" && i.distance < CONFIG.maxTetherDist
+      );
+      lastGrappleHitRef.current = nextHit ? { distance: nextHit.distance } : null;
+    }
+    const hit = lastGrappleHitRef.current;
 
     let grappleTension = 0;
     if (isGrappling && grapplePoint) {
@@ -222,13 +244,15 @@ export function Player() {
       grappleTension = tether.tension;
       rbRef.current.applyImpulse(tether.impulse, true);
 
-      tetherLineGeometry.setFromPoints([
-        new THREE.Vector3(position.current.x, position.current.y - 0.5, position.current.z),
-        grapplePoint,
-      ]);
+      tetherStartRef.current.set(
+        position.current.x,
+        position.current.y - 0.5,
+        position.current.z
+      );
+      tetherLineGeometry.setFromPoints([tetherStartRef.current, grapplePoint]);
     }
 
-    const cameraDirection = new THREE.Vector3();
+    const cameraDirection = cameraDirectionRef.current;
     camera.getWorldDirection(cameraDirection);
     cameraDirection.y = 0;
     cameraDirection.normalize();
