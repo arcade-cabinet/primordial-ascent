@@ -63,9 +63,11 @@ export function TerrainManager() {
 
   // Purge chunks when seed changes
   useEffect(() => {
-    setChunks(new Map());
-    requestedChunks.current.clear();
-    currentChunkCoord.current.set(-999, -999, -999);
+    if (seed) {
+      setChunks(new Map());
+      requestedChunks.current.clear();
+      currentChunkCoord.current.set(-999, -999, -999);
+    }
   }, [seed]);
 
   useEffect(() => {

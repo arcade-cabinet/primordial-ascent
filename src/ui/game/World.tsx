@@ -16,11 +16,13 @@ import { SeedSignpost } from "./SeedSignpost";
 
 export function World() {
   const liveState = useTrait(primordialEntity, PrimordialTrait);
+  const seed = liveState?.seed || "void";
+
+  const lightColor = useMemo(() => generateSeedColor(seed, 0.4, 0.8), [seed]);
+  const ambientColor = useMemo(() => generateSeedColor(seed, 0.2, 0.6), [seed]);
+
   if (!liveState) return null;
   const state = liveState;
-
-  const lightColor = useMemo(() => generateSeedColor(state.seed, 0.4, 0.8), [state.seed]);
-  const ambientColor = useMemo(() => generateSeedColor(state.seed, 0.2, 0.6), [state.seed]);
 
   return (
     <>
