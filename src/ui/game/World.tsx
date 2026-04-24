@@ -2,7 +2,7 @@ import { CONFIG } from "@/engine/types";
 import { PrimordialTrait } from "@/store/traits";
 import { primordialEntity } from "@/store/world";
 import { PointerLockControls } from "@react-three/drei";
-import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
+import { CuboidCollider, RigidBody, Physics } from "@react-three/rapier";
 import { useTrait } from "koota/react";
 import { useMemo } from "react";
 import { generateSeedColor } from "@/lib/seed";
@@ -13,6 +13,7 @@ import { Lava } from "./Lava";
 import { Player } from "./Player";
 import { TerrainManager } from "./TerrainManager";
 import { SeedSignpost } from "./SeedSignpost";
+import { FluidBiome } from "./FluidBiome";
 
 export function World() {
   const liveState = useTrait(primordialEntity, PrimordialTrait);
@@ -30,6 +31,7 @@ export function World() {
       <ambientLight intensity={0.42} color={ambientColor} />
       <directionalLight position={[10, 38, 12]} intensity={1.35} castShadow color={lightColor} />
       <pointLight position={[0, -24, -18]} intensity={38} distance={92} color="#ff3b1f" />
+      
       <spotLight
         position={[-18, 28, 10]}
         angle={0.55}
@@ -38,36 +40,14 @@ export function World() {
         distance={120}
         color="#00e5ff"
       />
-      <spotLight
-        position={[10, 34, -32]}
-        angle={0.42}
-        penumbra={0.8}
-        intensity={28}
-        distance={130}
-        color="#36fbd1"
-      />
-      <spotLight
-        position={[0, 116, -124]}
-        angle={0.74}
-        penumbra={0.84}
-        intensity={38}
-        distance={190}
-        color="#9af8ff"
-      />
-      <fogExp2 attach="fog" args={["#06131a", 0.0058]} />
-
-      <Physics gravity={[0, -22, 0]}>
+      
+      <Physics key={state.seed} gravity={[0, -22, 0]}>
         <CavernGuide />
         <EmberClouds />
         <Player />
         <TerrainManager />
         <SeedSignpost seed={state.seed} />
-        {/* Spawn safety platform: a thin fixed slab directly below
-            the player start so they have something to stand on
-            before the voxel-terrain worker produces colliders. Sits
-            8m below player spawn and is 20m wide, 1m thick. Without
-            this, the player spawns in midair, falls ~10m a second,
-            and dies in the magma before any terrain loads. */}
+        
         <RigidBody type="fixed" position={[CONFIG.playerStartPosition.x, CONFIG.playerStartPosition.y - 8, CONFIG.playerStartPosition.z]}>
           <CuboidCollider args={[10, 0.5, 10]} />
           <mesh receiveShadow>
@@ -78,12 +58,21 @@ export function World() {
       </Physics>
 
       <Lava />
+      <FluidBiome 
+        y={state.lavaHeight + 15} 
+        intensity={Math.max(0, 1 - state.distToLava / 120)} 
+        colorA={state.seed.includes("Obsidian") ? "#001133" : "#003366"}
+        colorB={state.seed.includes("Obsidian") ? "#000511" : "#001133"}
+      />
+      
       <CompletionFlare active={state.phase === "complete"} />
       <GrappleTargetHighlight position={state.grappleTargetPosition} active={state.grappleTargetState !== "none"} />
       <HeatShimmer y={state.lavaHeight + 3} intensity={Math.max(0, 1 - state.distToLava / 70)} />
+      
       {state.thermalLift > 0 ? (
         <ThermalDraft lift={state.thermalLift} y={state.lavaHeight + 8} />
       ) : null}
+      
       <AscentAxis progress={state.objectiveProgress} />
 
       {state.phase === "playing" && <PointerLockControls />}

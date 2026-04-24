@@ -73,18 +73,24 @@ export function normalizePrimordialControls(
 
 export function createCavernLayout(seed = "void"): CavernLayout {
   const rng = createSeededRNG(seed);
+  const isDeepWater = seed.includes("Ancient") || seed.includes("Abyss") || seed.includes("Archaic");
   
   const anchors = Array.from({ length: 8 }, (_, index) => {
     const y = 20 + index * 22 + (rng() - 0.5) * 8;
     const x = (rng() - 0.5) * 35;
     const z = -25 - index * 25 + (rng() - 0.5) * 15;
     
+    let accent = index % 3 === 1 ? "#2dd4bf" : "#00e5ff";
+    if (isDeepWater) {
+      accent = index % 2 === 0 ? "#3b82f6" : "#60a5fa";
+    }
+
     return {
       id: `anchor-${index + 1}`,
       position: [x, y, z] as [number, number, number],
       radius: index % 2 === 0 ? 3.8 : 3.2,
       ringRadius: index % 2 === 0 ? 5.8 : 5.2,
-      accent: index % 3 === 1 ? "#2dd4bf" : "#00e5ff",
+      accent,
     };
   });
 
@@ -93,11 +99,16 @@ export function createCavernLayout(seed = "void"): CavernLayout {
     const x = (rng() - 0.5) * 45;
     const z = -20 - index * 35 + (rng() - 0.5) * 20;
     
+    let accent = rng() > 0.5 ? "#35d07f" : "#8bd450";
+    if (isDeepWater) {
+      accent = rng() > 0.5 ? "#06b6d4" : "#22d3ee";
+    }
+
     return {
       id: `moss-shelf-${index + 1}`,
       position: [x, y, z] as [number, number, number],
       scale: [8 + rng() * 6, 1.1, 6 + rng() * 4] as [number, number, number],
-      accent: rng() > 0.5 ? "#35d07f" : "#8bd450",
+      accent,
     };
   });
 

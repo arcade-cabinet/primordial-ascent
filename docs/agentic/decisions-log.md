@@ -9,90 +9,62 @@ domain: context
 
 ---
 
+## 2026-04-24 — Manual Rapier Initialization (Single-Threaded)
+
+**Problem:** Vite 8 (Rolldown) production builds inject rehydration scripts into workers that fail when Rapier loads its WASM-wrapped worker, causing a fatal "black screen" crash. E2E tests confirmed "importScripts failed to load" on blob URLs.
+
+**Decision:** Abandoned the R3F-native worker-based physics. Instead, we manually call `init()` from `@dimforge/rapier3d-compat` in a `useEffect` within `GameStage.tsx`.
+
+**Outcome:** Resolved persistent production crashes. Physics now runs reliably on the main thread in single-threaded mode, bypasses Vite's worker wrapping.
+
+---
+
+## 2026-04-24 — Inlined Terrain Worker (Blob)
+
+**Problem:** Bundled Web Workers were failing to resolve dependency paths (like `simplex-noise`) in production, even when configured with IIFE format. Vite's production "help" logic was injecting incompatible scripts.
+
+**Decision:** Inlined the entire worker source as a template literal string in `TerrainManager.tsx`, including a zero-dependency Simplex Noise implementation. Instantiated via `Blob` and `createObjectURL`.
+
+**Outcome:** Zero-friction worker loading across all deployment targets.
+
+---
+
+## 2026-04-24 — Procedural Biome Overhaul
+
+**Problem:** Static voxel biomes felt repetitive and lacked organic depth.
+
+**Decision:** Introduced a shader-based `FluidBiome` (undersea water/magma layers) and tied voxel vein colors/pulsing to the adjective-adjective-noun seed signature.
+
+**Outcome:** Significant increase in visual depth and variety across different cavern signatures.
+
+---
+
 ## 2026-04-24 — Empty voxel chunks render nothing (no RigidBody, no mesh)
 
-**Reason:** Air chunks are a valid outcome of the voxel mesher —
-above the surface, past a cavern, etc. Mounting a
-`TrimeshCollider` on a zero-index mesh crashed Rapier with
-"expected instance of TA."
+**Reason:** Air chunks are a valid outcome of the voxel mesher. Mounting a `TrimeshCollider` on a zero-index mesh crashed Rapier.
 
-**Constraint:** Early-return `null` when
-`indices.length < 3 || positions.length < 9`. Must happen AFTER
-the `useMemo` + `useEffect(dispose)` hooks so rules-of-hooks order
-is preserved. PR #9.
+**Constraint:** Early-return `null` when `indices.length < 3 || positions.length < 9`. Must happen AFTER the `useMemo` + `useEffect(dispose)` hooks so rules-of-hooks order is preserved.
 
 ---
 
 ## 2026-04-24 — Chunk geometry disposes on unmount
 
-**Reason:** `useMemo` creates a `BufferGeometry` per chunk.
-r3f's auto-dispose doesn't reliably reach custom-built geometries,
-so every evicted chunk leaked its GPU VBO + Float32Array
-(positions, normals, colors) + Uint32Array (indices) uploads. Over
-a full ascent this is dozens-to-hundreds of leaked GPU buffers.
+**Reason:** r3f's auto-dispose doesn't reliably reach custom-built geometries. Every evicted chunk leaked its GPU VBO.
 
-**Constraint:** `useEffect(() => () => geometry.dispose(),
-[geometry])` co-located with the `useMemo`. PR #10.
+**Constraint:** `useEffect(() => () => geometry.dispose(), [geometry])` co-located with the `useMemo`.
 
 ---
 
 ## 2026-04-24 — Worker onmessage drops zombie chunk responses
 
-**Reason:** The worker can finish generating a chunk AFTER the
-player has walked out of its render range. Before this patch the
-onmessage handler unconditionally re-inserted the returned chunk
-into the `chunks` Map, where it sat forever — nothing would ever
-ask for it to be cleaned up again, but it was holding a
-BufferGeometry and a collider until full unmount.
+**Reason:** The worker can finish generating a chunk AFTER the player has already walked out of its render range.
 
-**Constraint:** onmessage checks `requestedChunks.current.has(key)`
-before `setChunks`. If the chunk has already been evicted from the
-request set, drop the response. PR #10.
+**Constraint:** onmessage checks `requestedChunks.current.has(key)` before `setChunks`.
 
 ---
 
 ## 2026-04-24 — Player grapple raycast is throttled + filtered
 
-**Reason:** The grapple-range check previously ran
-`raycaster.intersectObjects(scene.children, true)` every frame.
-This walks the entire scene graph recursively, including every
-chunk's thousands of triangles, every cavern guide, every beacon.
-At 60Hz with dozens of loaded chunks this is a severe CPU+GC
-spike — not a leak, but exactly the wrong thing to do inside a
-`useFrame`.
+**Reason:** Running scene-wide raycasts at 60Hz caused CPU spikes.
 
-**Constraint:** Accumulate `delta` and only raycast when the
-accumulator crosses 125ms (~8Hz). Traverse scene once per raycast
-and filter to meshes flagged `userData.raycastable`; only chunk
-meshes opt in. Hoist `cameraDirection` and tether-start
-`Vector3` allocations into refs so `useFrame` no longer allocates
-per tick. PR #10.
-
----
-
-## 2026-04-24 — Spawn safety platform below player start
-
-**Reason:** Player was spawning midair before terrain finished
-loading. On a slow device or first load, the player fell through
-empty space into lava within seconds — "CONSUMED BY MAGMA" before
-the first terrain chunk arrived.
-
-**Constraint:** Fixed RigidBody 20×1×20 plane 8 meters below
-`CONFIG.playerStartPosition`. Exists unconditionally — fine
-aesthetically because the player is facing up in the ascent
-direction. Earlier PR that also rolled in the real-Tailwind +
-ember-button fixes.
-
----
-
-## 2026-04-24 — Raycast-candidates are chunks only, via userData
-
-**Reason:** Even after throttling, raycasting against every mesh
-in the scene was overkill. But we can't use names (`'terrain-chunk'`
-is set on the mesh, not the RigidBody wrapper) in a way that
-filters efficiently.
-
-**Constraint:** Each Chunk mesh gets `userData={{ raycastable: true }}`.
-Player does `scene.traverse(...)` once per raycast tick and
-collects only meshes with that flag before calling
-`raycaster.intersectObjects(candidates, false)`. PR #10.
+**Constraint:** Throttled to ~8Hz. Traversed scene once per raycast and filtered to meshes flagged `userData.raycastable`.

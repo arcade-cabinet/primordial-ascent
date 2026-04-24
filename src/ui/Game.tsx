@@ -16,15 +16,10 @@ import { PrimordialTrait } from "@/store/traits";
 import { primordialEntity, primordialWorld } from "@/store/world";
 import type { GameSaveSlot, SessionMode } from "@/lib/sessionMode";
 import { useTrait, WorldProvider } from "koota/react";
-import { Suspense, lazy, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { audioManager } from "@/engine/audio";
 import { AnimatePresence } from "framer-motion";
-
-// All three gameplay surfaces pull in @react-three/fiber, drei, rapier,
-// and three. That's ~1.1MB gzipped of code a landing visitor should not
-// pay for. Lazy-load them together so the landing chunk is just React,
-// koota, framer-motion, and the StartScreen DOM.
-const GameStage = lazy(() => import("./game/GameStage"));
+import GameStage from "./game/GameStage";
 
 function PrimordialApp() {
   const [showNewAscentModal, setShowNewAscentModal] = useState(false);
@@ -54,9 +49,7 @@ function PrimordialApp() {
     <GameViewport background="#020608" data-browser-screenshot-mode="page">
       {needsStage && (
         <div className="absolute inset-0">
-          <Suspense fallback={null}>
-            <GameStage showOverlays={state.phase === "playing"} />
-          </Suspense>
+          <GameStage showOverlays={state.phase === "playing"} />
         </div>
       )}
 

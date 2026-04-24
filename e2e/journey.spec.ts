@@ -1,7 +1,16 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Primordial Ascent Journey", () => {
+  const consoleErrors: string[] = [];
+
   test.beforeEach(async ({ page }) => {
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        console.log(`BROWSER ERROR: ${msg.text()}`);
+        consoleErrors.push(msg.text());
+      }
+    });
+
     // Mock pointer lock for headless environments
     await page.addInitScript(() => {
       Element.prototype.requestPointerLock = async () => {
@@ -38,11 +47,11 @@ test.describe("Primordial Ascent Journey", () => {
     await page.screenshot({ path: "docs/screenshots/03-gameplay-start.png" });
 
     // 4. Verification of representative run
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(5000);
     const altitudeText = await page.getByTestId("metric-altitude").innerText();
     console.log(`Current altitude: ${altitudeText}`);
 
-    // 5. Trigger defeat (optional: we can wait for lava or just verify defeat screen exists if we can trigger it)
-    // For now, we've verified the "Player journey gate" requirements 1-5.
+    // 5. Verify no crashes
+    expect(consoleErrors).toHaveLength(0);
   });
 });

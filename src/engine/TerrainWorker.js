@@ -1,55 +1,9 @@
-import { isVitestBrowser } from "@/lib/testing";
-import { CONFIG } from "@/engine/types";
-import { PrimordialTrait } from "@/store/traits";
-import { primordialEntity } from "@/store/world";
-import { useFrame, useThree } from "@react-three/fiber";
-import { RigidBody, TrimeshCollider } from "@react-three/rapier";
-import { useTrait } from "koota/react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
+/**
+ * Primordial Ascent - Terrain Worker
+ * Self-contained voxel mesher.
+ * ZERO EXTERNAL DEPENDENCIES.
+ */
 
-interface ChunkData {
-  cx: number;
-  cy: number;
-  cz: number;
-  positions: Float32Array;
-  indices: Uint32Array;
-  normals: Float32Array;
-  colors: Float32Array;
-}
-
-function Chunk({ data }: { data: ChunkData }) {
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(data.positions, 3));
-    geo.setAttribute("normal", new THREE.BufferAttribute(data.normals, 3));
-    geo.setAttribute("color", new THREE.BufferAttribute(data.colors, 4));
-    geo.setIndex(new THREE.BufferAttribute(data.indices, 1));
-    return geo;
-  }, [data]);
-
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-    };
-  }, [geometry]);
-
-  const hasGeometry = data.indices.length >= 3 && data.positions.length >= 9;
-  if (!hasGeometry) return null;
-
-  return (
-    <RigidBody type="fixed" colliders={false}>
-      {!isVitestBrowser && (
-        <TrimeshCollider args={[new Float32Array(data.positions), new Uint32Array(data.indices)]} />
-      )}
-      <mesh geometry={geometry} userData={{ raycastable: true }} name="terrain-chunk">
-        <meshStandardMaterial vertexColors side={THREE.DoubleSide} />
-      </mesh>
-    </RigidBody>
-  );
-}
-
-const TERRAIN_WORKER_SOURCE = `
 function createSimplexNoise(random) {
   const p = new Uint8Array(256);
   for (let i = 0; i < 256; i++) p[i] = i;
@@ -65,11 +19,13 @@ function createSimplexNoise(random) {
     perm[i] = p[i & 255];
     permMod12[i] = perm[i] % 12;
   }
+
   const grad3 = new Float32Array([
     1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0,
     1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1,
     0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1
   ]);
+
   return (xin, yin, zin) => {
     let n0, n1, n2, n3;
     const F3 = 1.0 / 3.0;
@@ -138,30 +94,37 @@ function createSimplexNoise(random) {
     return 32.0 * (n0 + n1 + n2 + n3);
   };
 }
+
 self.onmessage = (e) => {
   const { cx, cy, cz, config, time } = e.data;
+  
   let seedVal = 0;
   const str = config.seed || "void";
   for (let i = 0; i < str.length; i++) {
     seedVal = (seedVal << 5) - seedVal + str.charCodeAt(i);
     seedVal |= 0;
   }
+  
   const random = () => {
     seedVal = (seedVal + 0x6d2b79f5) | 0;
     let t = Math.imul(seedVal ^ (seedVal >>> 15), 1 | seedVal);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) | 0;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+
   const noise3D = createSimplexNoise(random);
   const size = config.chunkSize;
   const vs = config.voxelSize;
   const scale = config.noiseScale;
+
   const positions = [];
   const indices = [];
   const normals = [];
   const colors = [];
+
   const densities = new Float32Array((size + 3) * (size + 3) * (size + 3));
   const idx = (x, y, z) => x + (size + 3) * (y + (size + 3) * z);
+
   for (let z = -1; z <= size + 1; z++) {
     for (let y = -1; y <= size + 1; y++) {
       for (let x = -1; x <= size + 1; x++) {
@@ -169,12 +132,13 @@ self.onmessage = (e) => {
         const wy = (cy * size + y) * vs;
         const wz = (cz * size + z) * vs;
         const distFromCenter = Math.sqrt(wx * wx + wz * wz);
-        const baseDensity = 24.0 - distFromCenter;
+        const baseDensity = 24 - distFromCenter;
         const n = noise3D(wx * scale, wy * scale, wz * scale);
-        densities[idx(x + 1, y + 1, z + 1)] = baseDensity + n * 18.0;
+        densities[idx(x + 1, y + 1, z + 1)] = baseDensity + n * 18;
       }
     }
   }
+
   const faces = [
     { dir: [1, 0, 0], corners: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]] },
     { dir: [-1, 0, 0], corners: [[0, 0, 1], [0, 1, 1], [0, 1, 0], [0, 0, 0]] },
@@ -183,7 +147,9 @@ self.onmessage = (e) => {
     { dir: [0, 0, 1], corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
     { dir: [0, 0, -1], corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] },
   ];
-  const pulse = Math.sin(time * 2.0) * 0.2 + 0.8;
+
+  const pulse = Math.sin(time * 2) * 0.2 + 0.8;
+
   for (let z = 0; z < size; z++) {
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
@@ -193,7 +159,8 @@ self.onmessage = (e) => {
           const wz = (cz * size + z) * vs;
           const colorNoise = noise3D(wx * 0.03, wy * 0.03, wz * 0.03);
           const isVein = colorNoise > 0.65;
-          const veinHue = (config.seed.split("").reduce((a, b) => a + b.charCodeAt(0), 0) % 360) / 360.0;
+          const veinHue = (config.seed.split("").reduce((a, b) => a + b.charCodeAt(0), 0) % 360) / 360;
+          
           for (let f = 0; f < 6; f++) {
             const face = faces[f];
             if (densities[idx(x + face.dir[0] + 1, y + face.dir[1] + 1, z + face.dir[2] + 1)] <= config.isoLevel) {
@@ -202,17 +169,17 @@ self.onmessage = (e) => {
                 const h = veinHue;
                 const s = 0.8;
                 const l = 0.4 + (pulse * 0.2);
-                const q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
-                const p = 2.0 * l - q;
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
                 const hue2rgb = (t) => {
-                  if (t < 0.0) t += 1.0;
-                  if (t > 1.0) t -= 1.0;
-                  if (t < 0.1666) return p + (q - p) * 6.0 * t;
-                  if (t < 0.5) return q;
-                  if (t < 0.6666) return p + (q - p) * (0.6666 - t) * 6.0;
+                  if (t < 0) t += 1;
+                  if (t > 1) t -= 1;
+                  if (t < 1/6) return p + (q - p) * 6 * t;
+                  if (t < 1/2) return q;
+                  if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
                   return p;
                 };
-                fr = hue2rgb(h + 0.3333); fg = hue2rgb(h); fb = hue2rgb(h - 0.3333);
+                fr = hue2rgb(h + 1/3); fg = hue2rgb(h); fb = hue2rgb(h - 1/3);
               }
               if (face.dir[1] === 1) { fr *= 1.4; fg *= 1.4; fb *= 1.4; }
               const startIdx = positions.length / 3;
@@ -228,127 +195,12 @@ self.onmessage = (e) => {
       }
     }
   }
+
   self.postMessage({
-    cx,
-    cy,
-    cz,
+    cx, cy, cz,
     positions: new Float32Array(positions),
     indices: new Uint32Array(indices),
     normals: new Float32Array(normals),
     colors: new Float32Array(colors),
   });
 };
-
-`
-
-export function TerrainManager() {
-  const { camera } = useThree();
-  const [chunks, setChunks] = useState<Map<string, ChunkData>>(new Map());
-  const workerRef = useRef<Worker>(null);
-
-  const requestedChunks = useRef<Set<string>>(new Set());
-  const currentChunkCoord = useRef<THREE.Vector3>(new THREE.Vector3(-999, -999, -999));
-
-  const pState = useTrait(primordialEntity, PrimordialTrait);
-  const seed = pState?.seed || "void";
-
-  useEffect(() => {
-    if (seed) {
-      setChunks(new Map());
-      requestedChunks.current.clear();
-      currentChunkCoord.current.set(-999, -999, -999);
-    }
-  }, [seed]);
-useEffect(() => {
-  // Create worker from inlined source using a Blob URL
-  const blob = new Blob([TERRAIN_WORKER_SOURCE], { type: "application/javascript" });
-  const workerUrl = URL.createObjectURL(blob);
-  workerRef.current = new Worker(workerUrl);
-
-  workerRef.current.onmessage = (e) => {
-    const data = e.data as ChunkData;
-    const key = `${data.cx},${data.cy},${data.cz}`;
-    if (!requestedChunks.current.has(key)) return;
-    setChunks((prev) => {
-      const next = new Map(prev);
-      next.set(key, data);
-      return next;
-    });
-  };
-
-  workerRef.current.onerror = (e) => {
-    console.error("Terrain Worker Error:", e);
-  };
-
-  return () => {
-    workerRef.current?.terminate();
-    URL.revokeObjectURL(workerUrl);
-  };
-}, []);
-
-  useFrame((state) => {
-    if (!workerRef.current) return;
-
-    const pCx = Math.floor(camera.position.x / (CONFIG.chunkSize * CONFIG.voxelSize));
-    const pCy = Math.floor(camera.position.y / (CONFIG.chunkSize * CONFIG.voxelSize));
-    const pCz = Math.floor(camera.position.z / (CONFIG.chunkSize * CONFIG.voxelSize));
-
-    if (
-      pCx === currentChunkCoord.current.x &&
-      pCy === currentChunkCoord.current.y &&
-      pCz === currentChunkCoord.current.z
-    ) {
-      return;
-    }
-    currentChunkCoord.current.set(pCx, pCy, pCz);
-
-    const rXZ = CONFIG.renderDistanceXZ;
-    const rY = CONFIG.renderDistanceY;
-    const currentKeys = new Set<string>();
-    const pendingRequests: Array<{ cx: number; cy: number; cz: number; key: string }> = [];
-
-    for (let cx = pCx - rXZ; cx <= pCx + rXZ; cx++) {
-      for (let cy = pCy - 1; cy <= pCy + rY; cy++) {
-        for (let cz = pCz - rXZ; cz <= pCz + rXZ; cz++) {
-          const key = `${cx},${cy},${cz}`;
-          currentKeys.add(key);
-          if (!requestedChunks.current.has(key)) {
-            pendingRequests.push({ cx, cy, cz, key });
-          }
-        }
-      }
-    }
-
-    const requestLimit = 8;
-    for (let i = 0; i < Math.min(pendingRequests.length, requestLimit); i++) {
-      const { cx, cy, cz, key } = pendingRequests[i];
-      requestedChunks.current.add(key);
-      workerRef.current.postMessage({ 
-        cx, cy, cz, 
-        config: { ...CONFIG, seed }, 
-        time: state.clock.elapsedTime 
-      });
-    }
-
-    setChunks((prev) => {
-      const next = new Map(prev);
-      let changed = false;
-      for (const key of next.keys()) {
-        if (!currentKeys.has(key)) {
-          next.delete(key);
-          requestedChunks.current.delete(key);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  });
-
-  return (
-    <>
-      {Array.from(chunks.values()).map((data) => (
-        <Chunk key={`${data.cx},${data.cy},${data.cz}`} data={data} />
-      ))}
-    </>
-  );
-}
