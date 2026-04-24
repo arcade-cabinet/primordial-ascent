@@ -17,12 +17,21 @@ function Chunk({ data }: { data: ChunkData }) {
     return geo;
   }, [data]);
 
+  // Free the GPU VBO + typed array uploads when this chunk unmounts
+  // (evicted from render range). Without this, every chunk ever rendered
+  // stays resident on the GPU and leaks memory over the course of a dive.
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
   return (
     <RigidBody type="fixed" colliders={false}>
       {!isVitestBrowser && (
         <TrimeshCollider args={[new Float32Array(data.positions), new Uint32Array(data.indices)]} />
       )}
-      <mesh geometry={geometry} name="terrain-chunk">
+      <mesh geometry={geometry} userData={{ raycastable: true }} name="terrain-chunk">
         <meshStandardMaterial vertexColors side={THREE.DoubleSide} />
       </mesh>
     </RigidBody>
@@ -44,6 +53,12 @@ export function TerrainManager() {
     workerRef.current.onmessage = (e) => {
       const data = e.data as ChunkData;
       const key = `${data.cx},${data.cy},${data.cz}`;
+      // Drop zombie responses: the worker can finish generating a chunk
+      // after the player has already walked out of its render range. If
+      // the key is no longer in the active (requested) set, the chunk
+      // has been evicted and re-inserting it would leak memory because
+      // nothing will ever ask for it to be cleaned up.
+      if (!requestedChunks.current.has(key)) return;
       setChunks((prev) => {
         const next = new Map(prev);
         next.set(key, data);
