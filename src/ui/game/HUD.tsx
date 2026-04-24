@@ -65,6 +65,7 @@ export function HUD() {
       />
       <div
         className="fixed inset-0 z-10 pointer-events-none"
+        data-testid="hud"
         style={{
           display: "grid",
           gridTemplateRows: "auto 1fr auto",
@@ -74,6 +75,7 @@ export function HUD() {
         }}
       >
         <div
+          data-testid="hud-metrics"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(min(7.1rem, 42vw), max-content))",
@@ -82,8 +84,8 @@ export function HUD() {
             justifyContent: "space-between",
           }}
         >
-          <Metric label="Altitude" value={`${state.altitude}M`} accent="#35d07f" />
-          <Metric label="Lava Gap" value={`${state.distToLava}M`} accent="#ff7448" />
+          <Metric label="Altitude" value={`${state.altitude}M`} accent="#35d07f" data-testid="metric-altitude" />
+          <Metric label="Lava Gap" value={`${state.distToLava}M`} accent="#ff7448" data-testid="metric-lava" />
           <Metric label="Thermal" value={`+${state.thermalLift.toFixed(1)}`} accent="#f59e0b" />
           <Metric label="Velocity" value={`${state.velocity}`} accent="#00e5ff" align="right" />
         </div>
@@ -243,14 +245,17 @@ function Metric({
   value,
   accent,
   align = "left",
+  "data-testid": testId,
 }: {
   label: string;
   value: string;
   accent: string;
   align?: "left" | "right";
+  "data-testid"?: string;
 }) {
   return (
     <div
+      data-testid={testId}
       style={{
         minWidth: "min(8.6rem, 30vw)",
         border: "1px solid rgba(148, 163, 184, 0.22)",

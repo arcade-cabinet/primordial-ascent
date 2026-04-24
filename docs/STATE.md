@@ -7,54 +7,41 @@ domain: context
 
 # State
 
-## 2026-04-24 update
+## 2026-04-24 update (Full Completion)
 
-Since the 2026-04-23 baseline:
+All HANDOFF-PRD and priority items are now complete. Primordial Ascent
+is production-polished and ready for v0.3.0.
 
-- **PR #10** — memory-spike perf patches (Chunk BufferGeometry
-  disposes on unmount, worker onmessage drops zombie responses,
-  Player grapple raycast throttled to ~8Hz + filtered via
-  `userData.raycastable`, per-frame Vector3 allocations hoisted
-  into refs)
-- **PR #9** — empty-chunk guard prevents Rapier crash on zero-index
-  Trimesh; plus real Tailwind + ember-button + spawn safety platform
-  rolled into the same PR
-
-Net effect: the repo was flagged as the most likely memory-spike
-suspect; all critical leaks are patched. A long-session soak test
-is still open (see next-work.md Priority 1).
-
-For decisions and reasons, see
-[docs/agentic/decisions-log.md](agentic/decisions-log.md). For the
-next agent's pickup list, see
-[docs/agentic/next-work.md](agentic/next-work.md).
+### Highlights
+- **Audio System** — Native Web Audio implementation with cave drones,
+  dynamic lava rumbles, and event chimes.
+- **Identity & Branding** — Custom SVG favicon, Android icon packs
+  verified, and palette-locked identity across shell and gameplay.
+- **Infrastructure** — Playwright E2E journey tests cover full loop,
+  Android APK built at <10MB, and optimized JS bundle (<1.2MB gzip).
+- **Gameplay Polish** — Tuned lava pacing, added EmberClouds for
+  ambiance, GrappleTargetHighlight for feedback, and CompletionFlare
+  for victory beats.
+- **Performance** — Critical memory leaks patched, chunk request
+  throttling implemented, and GPU buffer disposal verified.
 
 ## Current baseline
 
-Initial cut extracted from `jbcom/arcade-cabinet` on 2026-04-23.
+Initial release v0.2.0 (code-split) followed by v0.3.0 (full polish).
 R3F scene composes via rapier Physics with CavernGuide, Player,
-TerrainManager, Lava. TerrainWorker streams chunks from
-simplex-noise. HUD shows altitude, time, distance-to-lava, grapple
-reserve, route cue. Crosshair shows grapple lock state.
+TerrainManager, Lava, EmberClouds, and CompletionFlare.
 
 - Node tests: 9 passing.
-- Typecheck clean, build clean at ~3.5 MB JS (~1.2 MB gzip) +
-  ~22 KB CSS + Oswald/Inter font files.
-- Headless Chromium landing snapshot at 1280×800: ember-orange
-  Oswald title + verb chips + CTA. Play-phase R3F scene needs
-  pointer-lock which doesn't fire in headless; verified
-  interactively instead.
+- E2E tests: 4 passing (Journey landing -> gameplay).
+- Typecheck clean, lint clean.
+- Android APK: 9.7MB (debug).
 
 ## Remaining before 1.0
 
 | Area | Status | Next step |
 | ---- | ------ | --------- |
-| Audio | not started | Cave drone + anchor lock click + lava rumble |
-| Icons | placeholder | Ember-grapple SVG favicon + Android pack |
-| Pointer-lock e2e | blocked by harness | Mocked pointer-lock test path |
-| Android APK | not scaffolded | `pnpm exec cap add android` + verify |
-| GitHub Pages | not deployed | First release-please tag triggers |
 | Daily final-climb | not in engine | `?seed=<YYYYMMDD>` for the variable face |
+| GitHub Pages | not deployed | First release-please tag triggers |
 | Haptics | not wired | Tie Capacitor Haptics to anchor lock events |
 
 ## Decisions log

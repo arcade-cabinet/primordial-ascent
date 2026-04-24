@@ -2,8 +2,11 @@ import { isVitestBrowser } from "@/lib/testing";
 import type { ChunkData } from "@/engine/TerrainWorker";
 import TerrainWorker from "@/engine/TerrainWorker?worker";
 import { CONFIG } from "@/engine/types";
+import { PrimordialTrait } from "@/store/traits";
+import { primordialEntity } from "@/store/world";
 import { useFrame, useThree } from "@react-three/fiber";
 import { RigidBody, TrimeshCollider } from "@react-three/rapier";
+import { useTrait } from "koota/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -55,6 +58,18 @@ export function TerrainManager() {
   const requestedChunks = useRef<Set<string>>(new Set());
   const currentChunkCoord = useRef<THREE.Vector3>(new THREE.Vector3(-999, -999, -999));
 
+  const pState = useTrait(primordialEntity, PrimordialTrait);
+  const seed = pState?.seed || "void";
+
+  // Purge chunks when seed changes
+  useEffect(() => {
+    if (seed) {
+      setChunks(new Map());
+      requestedChunks.current.clear();
+      currentChunkCoord.current.set(-999, -999, -999);
+    }
+  }, [seed]);
+
   useEffect(() => {
     workerRef.current = new TerrainWorker();
 
@@ -99,6 +114,7 @@ export function TerrainManager() {
     const rXZ = CONFIG.renderDistanceXZ;
     const rY = CONFIG.renderDistanceY;
     const currentKeys = new Set<string>();
+    const pendingRequests: Array<{ cx: number; cy: number; cz: number; key: string }> = [];
 
     for (let cx = pCx - rXZ; cx <= pCx + rXZ; cx++) {
       for (let cy = pCy - 1; cy <= pCy + rY; cy++) {
@@ -106,11 +122,19 @@ export function TerrainManager() {
           const key = `${cx},${cy},${cz}`;
           currentKeys.add(key);
           if (!requestedChunks.current.has(key)) {
-            requestedChunks.current.add(key);
-            workerRef.current.postMessage({ cx, cy, cz, config: CONFIG });
+            pendingRequests.push({ cx, cy, cz, key });
           }
         }
       }
+    }
+
+    // Throttle: only request up to 8 new chunks per frame to avoid blocking the main thread
+    const requestLimit = 8;
+    
+    for (let i = 0; i < Math.min(pendingRequests.length, requestLimit); i++) {
+      const { cx, cy, cz, key } = pendingRequests[i];
+      requestedChunks.current.add(key);
+      workerRef.current.postMessage({ cx, cy, cz, config: { ...CONFIG, seed } });
     }
 
     setChunks((prev) => {

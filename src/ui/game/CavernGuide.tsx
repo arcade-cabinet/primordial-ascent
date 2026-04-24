@@ -118,7 +118,7 @@ export function CavernGuide() {
         />
       ) : null}
 
-      <RouteBeaconTrail />
+      <RouteBeaconTrail layout={layout} />
 
       <group position={[0, 24, -32]}>
         {[0, 1, 2, 3].map((index) => (
@@ -218,8 +218,7 @@ function GrappleGuideMarkers({
   );
 }
 
-function RouteBeaconTrail() {
-  const layout = useMemo(() => createCavernLayout(), []);
+function RouteBeaconTrail({ layout }: { layout: ReturnType<typeof createCavernLayout> }) {
   const liveState = useTrait(primordialEntity, PrimordialTrait);
   const points = useMemo(() => {
     const route = [

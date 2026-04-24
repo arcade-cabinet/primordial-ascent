@@ -1,7 +1,3 @@
-import {
-  advanceLavaHeight,
-  calculateDistanceToLava,
-} from "@/engine/primordialSimulation";
 import { CONFIG } from "@/engine/types";
 import { PrimordialTrait } from "@/store/traits";
 import { primordialEntity } from "@/store/world";
@@ -23,7 +19,7 @@ export function Lava() {
     []
   );
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (isRuntimePaused()) return;
 
     if (materialRef.current) {
@@ -32,21 +28,7 @@ export function Lava() {
     if (meshRef.current) {
       const pState = primordialEntity.get(PrimordialTrait);
       if (pState?.phase === "playing") {
-        const newY = advanceLavaHeight(
-          pState.lavaHeight,
-          pState.timeSurvived,
-          delta * 1000,
-          pState.sessionMode
-        );
-        meshRef.current.position.y = newY;
-        const distToLava = calculateDistanceToLava(pState.altitude, newY);
-
-        primordialEntity.set(PrimordialTrait, {
-          ...pState,
-          phase: pState.altitude <= newY + CONFIG.lavaContactMargin ? "gameover" : pState.phase,
-          lavaHeight: newY,
-          distToLava,
-        });
+        meshRef.current.position.y = pState.lavaHeight;
       }
     }
   });

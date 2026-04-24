@@ -22,6 +22,7 @@ export interface PrimordialTelemetry {
   grappleAttempted?: boolean;
   grappleActive?: boolean;
   grappleDistance?: number | null;
+  grappleTargetPosition?: Vec3 | null;
   grappleTension?: number;
 }
 
@@ -74,12 +75,14 @@ export interface PrimordialGrappleGuideCue {
 export interface PrimordialState {
   phase: "menu" | "playing" | "gameover" | "complete";
   sessionMode: SessionMode;
+  seed: string;
   altitude: number;
   maxAltitude: number;
   timeSurvived: number; // in milliseconds
   velocity: number;
   distToLava: number;
   isInGrappleRange: boolean;
+  grappleTargetPosition: Vec3 | null;
   lavaHeight: number;
   thermalLift: number;
   grappleTargetState: GrappleTargetState;
@@ -122,6 +125,7 @@ export interface CavernLayout {
 
 export const CONFIG = {
   // World Gen
+  seed: "initial-void",
   chunkSize: 16,
   voxelSize: 4.5,
   isoLevel: 0.15,
@@ -142,8 +146,8 @@ export const CONFIG = {
 
   // Pacing
   lavaStartHeight: -40,
-  lavaBaseSpeed: 6.0,
-  lavaAccel: 0.08,
+  lavaBaseSpeed: 4.2,
+  lavaAccel: 0.06,
   lavaSpeedScale: 0.1,
   lavaContactMargin: 0.6,
   escapeAltitude: 180,

@@ -67,6 +67,7 @@ export function StartScreen({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.6 }}
+      data-testid="start-screen"
       style={{
         position: "absolute",
         inset: 0,

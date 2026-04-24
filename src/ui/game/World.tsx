@@ -4,21 +4,31 @@ import { primordialEntity } from "@/store/world";
 import { PointerLockControls } from "@react-three/drei";
 import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
 import { useTrait } from "koota/react";
+import { useMemo } from "react";
+import { generateSeedColor } from "@/lib/seed";
 import { CavernGuide } from "./CavernGuide";
+import { CompletionFlare } from "./CompletionFlare";
+import { EmberClouds } from "./EmberClouds";
 import { Lava } from "./Lava";
 import { Player } from "./Player";
 import { TerrainManager } from "./TerrainManager";
+import { SeedSignpost } from "./SeedSignpost";
 
 export function World() {
   const liveState = useTrait(primordialEntity, PrimordialTrait);
+  const seed = liveState?.seed || "void";
+
+  const lightColor = useMemo(() => generateSeedColor(seed, 0.4, 0.8), [seed]);
+  const ambientColor = useMemo(() => generateSeedColor(seed, 0.2, 0.6), [seed]);
+
   if (!liveState) return null;
   const state = liveState;
 
   return (
     <>
       <color attach="background" args={["#06131a"]} />
-      <ambientLight intensity={0.42} color="#b9f7ff" />
-      <directionalLight position={[10, 38, 12]} intensity={1.35} castShadow color="#dffbff" />
+      <ambientLight intensity={0.42} color={ambientColor} />
+      <directionalLight position={[10, 38, 12]} intensity={1.35} castShadow color={lightColor} />
       <pointLight position={[0, -24, -18]} intensity={38} distance={92} color="#ff3b1f" />
       <spotLight
         position={[-18, 28, 10]}
@@ -48,8 +58,10 @@ export function World() {
 
       <Physics gravity={[0, -22, 0]}>
         <CavernGuide />
+        <EmberClouds />
         <Player />
         <TerrainManager />
+        <SeedSignpost seed={state.seed} />
         {/* Spawn safety platform: a thin fixed slab directly below
             the player start so they have something to stand on
             before the voxel-terrain worker produces colliders. Sits
@@ -66,6 +78,8 @@ export function World() {
       </Physics>
 
       <Lava />
+      <CompletionFlare active={state.phase === "complete"} />
+      <GrappleTargetHighlight position={state.grappleTargetPosition} active={state.grappleTargetState !== "none"} />
       <HeatShimmer y={state.lavaHeight + 3} intensity={Math.max(0, 1 - state.distToLava / 70)} />
       {state.thermalLift > 0 ? (
         <ThermalDraft lift={state.thermalLift} y={state.lavaHeight + 8} />
@@ -74,6 +88,24 @@ export function World() {
 
       {state.phase === "playing" && <PointerLockControls />}
     </>
+  );
+}
+
+function GrappleTargetHighlight({ position, active }: { position: { x: number; y: number; z: number } | null; active: boolean }) {
+  if (!position || !active) return null;
+
+  return (
+    <group position={[position.x, position.y, position.z]}>
+      <mesh>
+        <sphereGeometry args={[0.72, 16, 16]} />
+        <meshBasicMaterial color="#36fbd1" transparent opacity={0.34} toneMapped={false} />
+      </mesh>
+      <mesh>
+        <torusGeometry args={[1.2, 0.08, 8, 32]} />
+        <meshBasicMaterial color="#00e5ff" transparent opacity={0.42} toneMapped={false} />
+      </mesh>
+      <pointLight color="#00e5ff" intensity={8} distance={12} decay={2} />
+    </group>
   );
 }
 

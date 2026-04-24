@@ -13,6 +13,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { type RapierRigidBody, RigidBody } from "@react-three/rapier";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { audioManager } from "@/engine/audio";
 
 const CAMERA_PITCH = 0.18;
 const UNLOCKED_LOOK_AHEAD = new THREE.Vector3(0, 8, -42);
@@ -36,7 +37,7 @@ export function Player() {
   });
   // Reused across frames to avoid per-frame allocations inside useFrame.
   const raycastAccumRef = useRef(0);
-  const lastGrappleHitRef = useRef<{ distance: number } | null>(null);
+  const lastGrappleHitRef = useRef<{ distance: number; point: THREE.Vector3 } | null>(null);
   const cameraDirectionRef = useRef(new THREE.Vector3());
   // Fixed 2-vertex buffer; rewritten in place each frame the tether is
   // visible. Avoids `setFromPoints` which allocates new typed arrays and
@@ -105,6 +106,7 @@ export function Player() {
 
       if (!hit) return;
 
+      audioManager.playClick();
       movement.current.grapple = true;
       setIsGrappling(true);
       // Clone: raycaster owns hit.point and mutates it on the next cast.
@@ -228,11 +230,21 @@ export function Player() {
     const pState = primordialEntity.get(PrimordialTrait);
     if (pState?.phase !== "playing" || !rbRef.current) return;
 
+    // Dev-mode soak: teleport upward if ?dev=soak is present
+    const isSoakMode = window.location.search.includes("dev=soak");
+    if (isSoakMode) {
+      const current = rbRef.current.translation();
+      rbRef.current.setTranslation({ x: current.x, y: current.y + 0.1, z: current.z }, true);
+      rbRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    }
+
     const currentTrans = rbRef.current.translation();
     const currentVel = rbRef.current.linvel();
     const attemptedGrapple = grappleAttempted.current;
     grappleAttempted.current = false;
     position.current.set(currentTrans.x, currentTrans.y, currentTrans.z);
+
+    audioManager.updateLavaIntensity(pState.distToLava);
 
     // Throttle the scene raycast to ~8Hz (125ms). Previously this walked
     // every mesh in the scene graph every frame, including every terrain
@@ -252,7 +264,9 @@ export function Player() {
       const nextHit = intersects.find(
         (i) => i.object.name === "terrain-chunk" && i.distance < CONFIG.maxTetherDist
       );
-      lastGrappleHitRef.current = nextHit ? { distance: nextHit.distance } : null;
+      lastGrappleHitRef.current = nextHit
+        ? { distance: nextHit.distance, point: nextHit.point.clone() }
+        : null;
     }
     const hit = lastGrappleHitRef.current;
 
@@ -310,10 +324,10 @@ export function Player() {
       advancePrimordialState(pState, delta * 1000, {
         position: currentTrans,
         velocity: currentVel,
-        lavaHeight: pState.lavaHeight,
         grappleAttempted: attemptedGrapple,
         grappleActive: isGrappling,
         grappleDistance: hit?.distance ?? null,
+        grappleTargetPosition: hit?.point ?? null,
         grappleTension,
       })
     );

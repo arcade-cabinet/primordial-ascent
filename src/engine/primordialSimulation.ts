@@ -1,4 +1,5 @@
 import { getSessionPressureScale, normalizeSessionMode } from "@/lib/sessionMode";
+import { createSeededRNG } from "@/lib/seed";
 import type {
   CavernLayout,
   GrappleTargetState,
@@ -26,22 +27,25 @@ const DEFAULT_CONTROLS: PrimordialControls = {
 
 export function createInitialPrimordialState(
   phase: PrimordialState["phase"] = "menu",
-  mode: string | null | undefined = "standard"
+  mode: string | null | undefined = "standard",
+  seed = "void"
 ): PrimordialState {
   const sessionMode = normalizeSessionMode(mode);
   const altitude = calculateAltitude(CONFIG.playerStartPosition.y);
   const lavaHeight = CONFIG.lavaStartHeight;
   const distToLava = calculateDistanceToLava(CONFIG.playerStartPosition.y, lavaHeight);
-  const routeCue = calculatePrimordialRouteCue(CONFIG.playerStartPosition, distToLava);
+  const routeCue = calculatePrimordialRouteCue(CONFIG.playerStartPosition, distToLava, seed);
   const baseState = {
     phase,
     sessionMode,
+    seed,
     altitude,
     maxAltitude: altitude,
     timeSurvived: 0,
     velocity: 0,
     distToLava,
     isInGrappleRange: false,
+    grappleTargetPosition: null,
     lavaHeight,
     thermalLift: calculateThermalLift(distToLava),
     grappleTargetState: "none" as const,
@@ -67,48 +71,47 @@ export function normalizePrimordialControls(
   };
 }
 
-export function createCavernLayout(): CavernLayout {
-  const anchors = [
-    [0, 18, -24],
-    [9, 35, -42],
-    [-8, 55, -64],
-    [12, 76, -88],
-    [-10, 100, -110],
-    [6, 126, -132],
-    [0, 154, -156],
-  ].map(([x, y, z], index) => ({
-    id: `anchor-${index + 1}`,
-    position: [x, y, z] as [number, number, number],
-    radius: index % 2 === 0 ? 3.8 : 3.2,
-    ringRadius: index % 2 === 0 ? 5.8 : 5.2,
-    accent: index % 3 === 1 ? "#2dd4bf" : "#00e5ff",
-  }));
+export function createCavernLayout(seed = "void"): CavernLayout {
+  const rng = createSeededRNG(seed);
+  
+  const anchors = Array.from({ length: 8 }, (_, index) => {
+    const y = 20 + index * 22 + (rng() - 0.5) * 8;
+    const x = (rng() - 0.5) * 35;
+    const z = -25 - index * 25 + (rng() - 0.5) * 15;
+    
+    return {
+      id: `anchor-${index + 1}`,
+      position: [x, y, z] as [number, number, number],
+      radius: index % 2 === 0 ? 3.8 : 3.2,
+      ringRadius: index % 2 === 0 ? 5.8 : 5.2,
+      accent: index % 3 === 1 ? "#2dd4bf" : "#00e5ff",
+    };
+  });
 
-  const platforms = [
-    [-10, 13, -18, 10, 1.2, 7],
-    [11, 29, -35, 8, 1.1, 6],
-    [-13, 49, -56, 9, 1.2, 6.5],
-    [14, 70, -78, 7, 1.1, 5.5],
-    [-9, 94, -101, 8.5, 1.2, 7],
-    [9, 121, -126, 7, 1.1, 5.8],
-  ].map(([x, y, z, sx, sy, sz], index) => ({
-    id: `moss-shelf-${index + 1}`,
-    position: [x, y, z] as [number, number, number],
-    scale: [sx, sy, sz] as [number, number, number],
-    accent: index % 2 === 0 ? "#35d07f" : "#8bd450",
-  }));
+  const platforms = Array.from({ length: 6 }, (_, index) => {
+    const y = 15 + index * 30 + (rng() - 0.5) * 10;
+    const x = (rng() - 0.5) * 45;
+    const z = -20 - index * 35 + (rng() - 0.5) * 20;
+    
+    return {
+      id: `moss-shelf-${index + 1}`,
+      position: [x, y, z] as [number, number, number],
+      scale: [8 + rng() * 6, 1.1, 6 + rng() * 4] as [number, number, number],
+      accent: rng() > 0.5 ? "#35d07f" : "#8bd450",
+    };
+  });
 
-  const ribs = Array.from({ length: 10 }, (_, index) => {
-    const y = 8 + index * 16;
-    const z = -18 - index * 16;
-    const angle = index * 0.47;
+  const ribs = Array.from({ length: 12 }, (_, index) => {
+    const y = 8 + index * 18;
+    const z = -20 - index * 20;
+    const angle = index * 0.5 + (rng() - 0.5) * 0.2;
 
     return {
       id: `basalt-rib-${index + 1}`,
-      position: [Math.sin(angle) * 2, y, z] as [number, number, number],
-      rotation: [Math.PI / 2, angle, index % 2 === 0 ? 0.14 : -0.18] as [number, number, number],
-      scale: [1.0 + index * 0.035, 1, 1] as [number, number, number],
-      accent: index % 3 === 0 ? "#334155" : "#1f2937",
+      position: [Math.sin(angle) * 5, y, z] as [number, number, number],
+      rotation: [Math.PI / 2, angle, (rng() - 0.5) * 0.4] as [number, number, number],
+      scale: [1.2 + rng() * 0.4, 1, 1] as [number, number, number],
+      accent: rng() > 0.5 ? "#334155" : "#1f2937",
     };
   });
 
@@ -118,27 +121,36 @@ export function createCavernLayout(): CavernLayout {
 export function advancePrimordialState(
   state: PrimordialState,
   deltaMs: number,
-  telemetry: PrimordialTelemetry
+  telemetry: Omit<PrimordialTelemetry, "lavaHeight">
 ): PrimordialState {
   if (state.phase !== "playing") {
     return state;
   }
 
   const elapsedDelta = Math.max(0, deltaMs);
+  const lavaHeight = advanceLavaHeight(
+    state.lavaHeight,
+    state.timeSurvived,
+    elapsedDelta,
+    state.sessionMode
+  );
   const altitude = calculateAltitude(telemetry.position.y);
   const velocity = calculatePlayerSpeed(telemetry.velocity);
-  const distToLava = calculateDistanceToLava(telemetry.position.y, telemetry.lavaHeight);
+  const distToLava = calculateDistanceToLava(telemetry.position.y, lavaHeight);
   const objectiveProgress = calculateObjectiveProgress(altitude);
   const thermalLift = calculateThermalLift(distToLava);
-  const routeCue = calculatePrimordialRouteCue(telemetry.position, distToLava);
+  const routeCue = calculatePrimordialRouteCue(telemetry.position, distToLava, state.seed);
   const grappleTargetState = calculateGrappleTargetState(
     telemetry.grappleDistance,
     telemetry.grappleActive,
     telemetry.grappleTension
   );
-  const grappleFeedback = calculateGrappleFeedback(state, elapsedDelta, telemetry);
+  const grappleFeedback = calculateGrappleFeedback(state, elapsedDelta, {
+    ...telemetry,
+    lavaHeight,
+  });
   const nextPhase: PrimordialState["phase"] =
-    telemetry.position.y <= telemetry.lavaHeight + CONFIG.lavaContactMargin
+    telemetry.position.y <= lavaHeight + CONFIG.lavaContactMargin
       ? "gameover"
       : objectiveProgress >= 100
         ? "complete"
@@ -151,7 +163,8 @@ export function advancePrimordialState(
     timeSurvived: state.timeSurvived + elapsedDelta,
     velocity,
     distToLava,
-    lavaHeight: telemetry.lavaHeight,
+    lavaHeight,
+    grappleTargetPosition: telemetry.grappleTargetPosition ?? null,
     thermalLift,
     isInGrappleRange: canGrapple(telemetry.grappleDistance),
     grappleTargetState,
@@ -214,9 +227,10 @@ export function calculateObjectiveProgress(altitude: number): number {
 
 export function calculatePrimordialRouteCue(
   position: Vec3,
-  distToLava: number
+  distToLava: number,
+  seed = "void"
 ): PrimordialRouteCue {
-  const layout = createCavernLayout();
+  const layout = createCavernLayout(seed);
   const nextAnchor = layout.anchors.find((anchor) => anchor.position[1] > position.y + 3) ?? null;
   const nextShelf =
     layout.platforms.find((platform) => platform.position[1] > position.y + 1) ?? null;
