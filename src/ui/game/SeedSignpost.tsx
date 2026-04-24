@@ -29,7 +29,6 @@ export function SeedSignpost({ seed }: SeedSignpostProps) {
         position={[0, 1.2, 0]}
         fontSize={0.45}
         color="#f2e8d9"
-        font="Oswald"
         anchorX="center"
         anchorY="middle"
         maxWidth={4}
@@ -42,7 +41,6 @@ export function SeedSignpost({ seed }: SeedSignpostProps) {
         position={[0, 0.5, 0]}
         fontSize={0.8}
         color="#c75415"
-        font="Oswald"
         anchorX="center"
         anchorY="middle"
         maxWidth={6}

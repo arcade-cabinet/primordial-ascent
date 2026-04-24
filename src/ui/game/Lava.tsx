@@ -1,4 +1,3 @@
-import { CONFIG } from "@/engine/types";
 import { PrimordialTrait } from "@/store/traits";
 import { primordialEntity } from "@/store/world";
 import { isRuntimePaused } from "@/lib/runtimePause";
@@ -6,17 +5,61 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
+const vertexShader = `
+  varying vec2 vUv;
+  varying vec3 vWorldPosition;
+  
+  void main() {
+    vUv = uv;
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const fragmentShader = `
+  uniform float time;
+  uniform vec3 colorA;
+  uniform vec3 colorB;
+  varying vec2 vUv;
+  varying vec3 vWorldPosition;
+
+  // Simple noise function
+  float noise(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+  }
+
+  void main() {
+    vec2 uv = vUv;
+    
+    // Animate texture coordinates
+    float n = noise(uv * 10.0 + time * 0.5);
+    float wave = sin(vWorldPosition.x * 0.1 + time) * cos(vWorldPosition.z * 0.1 + time);
+    
+    vec3 color = mix(colorA, colorB, uv.y + n * 0.2 + wave * 0.1);
+    
+    // Glower near the surface
+    float glow = smoothstep(0.0, 0.2, uv.y);
+    color += colorA * glow * 0.4;
+
+    gl_FragColor = vec4(color, 0.94);
+  }
+`;
+
 export function Lava() {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
+  const liveState = primordialEntity.get(PrimordialTrait);
+  const isWater = liveState?.seed.includes("Ancient") || liveState?.seed.includes("Abyss");
+
   const uniforms = useMemo(
     () => ({
       time: { value: 0 },
-      colorA: { value: new THREE.Color("#ff3300") },
-      colorB: { value: new THREE.Color("#3a0500") },
+      colorA: { value: new THREE.Color(isWater ? "#00e5ff" : "#ff3300") },
+      colorB: { value: new THREE.Color(isWater ? "#001133" : "#3a0500") },
     }),
-    []
+    [isWater]
   );
 
   useFrame((state) => {
@@ -33,68 +76,8 @@ export function Lava() {
     }
   });
 
-  const vertexShader = `
-    varying vec2 vUv;
-    varying vec3 vPosition;
-    uniform float time;
-    
-    // Simplex 2D noise
-    vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
-    float snoise(vec2 v){
-      const vec4 C = vec4(0.211324865405187, 0.366025403784439,
-               -0.577350269189626, 0.024390243902439);
-      vec2 i  = floor(v + dot(v, C.yy) );
-      vec2 x0 = v -   i + dot(i, C.xx);
-      vec2 i1;
-      i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-      vec4 x12 = x0.xyxy + C.xxzz;
-      x12.xy -= i1;
-      i = mod(i, 289.0);
-      vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
-      + i.x + vec3(0.0, i1.x, 1.0 ));
-      vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-      m = m*m ;
-      m = m*m ;
-      vec3 x = 2.0 * fract(p * C.www) - 1.0;
-      vec3 h = abs(x) - 0.5;
-      vec3 ox = floor(x + 0.5);
-      vec3 a0 = x - ox;
-      m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
-      vec3 g;
-      g.x  = a0.x  * x0.x  + h.x  * x0.y;
-      g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-      return 130.0 * dot(m, g);
-    }
-
-    void main() {
-      vUv = uv;
-      vPosition = position;
-      vec3 pos = position;
-      float noiseFreq = 0.05;
-      float noiseAmp = 2.0;
-      vec2 noisePos = vec2(pos.x * noiseFreq + time * 0.5, pos.z * noiseFreq + time * 0.5);
-      pos.y += snoise(noisePos) * noiseAmp;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-    }
-  `;
-
-  const fragmentShader = `
-    uniform vec3 colorA;
-    uniform vec3 colorB;
-    uniform float time;
-    varying vec2 vUv;
-    varying vec3 vPosition;
-
-    void main() {
-      float mixValue = sin(vPosition.y * 0.5 + time) * 0.5 + 0.5;
-      vec3 color = mix(colorA, colorB, mixValue);
-      float rim = smoothstep(0.15, 0.9, vUv.y) * 0.18;
-      gl_FragColor = vec4(color + vec3(rim, rim * 0.35, 0.0), 0.94);
-    }
-  `;
-
   return (
-    <mesh ref={meshRef} position={[0, CONFIG.lavaStartHeight, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -40, 0]}>
       <planeGeometry args={[1000, 1000, 64, 64]} />
       <shaderMaterial
         ref={materialRef}

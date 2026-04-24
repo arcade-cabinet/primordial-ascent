@@ -35,6 +35,7 @@
     "@capacitor/screen-orientation": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/oswald": "^5.2.8",
     "@react-three/drei": "^10.7.7",
