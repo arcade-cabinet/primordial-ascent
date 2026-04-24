@@ -1,7 +1,8 @@
+import { CONFIG } from "@/engine/types";
 import { PrimordialTrait } from "@/store/traits";
 import { primordialEntity } from "@/store/world";
 import { PointerLockControls } from "@react-three/drei";
-import { Physics } from "@react-three/rapier";
+import { CuboidCollider, Physics, RigidBody } from "@react-three/rapier";
 import { useTrait } from "koota/react";
 import { CavernGuide } from "./CavernGuide";
 import { Lava } from "./Lava";
@@ -49,6 +50,19 @@ export function World() {
         <CavernGuide />
         <Player />
         <TerrainManager />
+        {/* Spawn safety platform: a thin fixed slab directly below
+            the player start so they have something to stand on
+            before the voxel-terrain worker produces colliders. Sits
+            8m below player spawn and is 20m wide, 1m thick. Without
+            this, the player spawns in midair, falls ~10m a second,
+            and dies in the magma before any terrain loads. */}
+        <RigidBody type="fixed" position={[CONFIG.playerStartPosition.x, CONFIG.playerStartPosition.y - 8, CONFIG.playerStartPosition.z]}>
+          <CuboidCollider args={[10, 0.5, 10]} />
+          <mesh receiveShadow>
+            <boxGeometry args={[20, 1, 20]} />
+            <meshStandardMaterial color="#1a2a33" roughness={0.94} />
+          </mesh>
+        </RigidBody>
       </Physics>
 
       <Lava />
