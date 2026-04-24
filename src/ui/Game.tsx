@@ -7,7 +7,6 @@ import {
 import { PhaseTrait } from "@/store/shared-traits";
 import { useRunSnapshotAutosave } from "@/hooks/useRunSnapshotAutosave";
 import { recordRunResult } from "@/hooks/runtimeResult";
-import { browserTestCanvasGlOptions } from "@/lib/testing";
 import {
   createInitialPrimordialState,
   getPrimordialRunSummary,
@@ -15,12 +14,14 @@ import {
 import { PrimordialTrait } from "@/store/traits";
 import { primordialEntity, primordialWorld } from "@/store/world";
 import type { GameSaveSlot, SessionMode } from "@/lib/sessionMode";
-import { Canvas } from "@react-three/fiber";
 import { useTrait, WorldProvider } from "koota/react";
-import { useEffect } from "react";
-import { World } from "./game/World";
-import { Crosshair } from "./game/Crosshair";
-import { HUD } from "./game/HUD";
+import { Suspense, lazy, useEffect } from "react";
+
+// All three gameplay surfaces pull in @react-three/fiber, drei, rapier,
+// and three. That's ~1.1MB gzipped of code a landing visitor should not
+// pay for. Lazy-load them together so the landing chunk is just React,
+// koota, framer-motion, and the StartScreen DOM.
+const GameStage = lazy(() => import("./game/GameStage"));
 
 function PrimordialApp() {
   const liveState = useTrait(primordialEntity, PrimordialTrait);
@@ -40,9 +41,15 @@ function PrimordialApp() {
     build: () => state,
   });
 
+  const needsStage = state.phase === "playing";
+
   return (
     <GameViewport background="#020608" data-browser-screenshot-mode="page">
-      <Canvas gl={browserTestCanvasGlOptions}>{state.phase === "playing" && <World />}</Canvas>
+      {needsStage && (
+        <Suspense fallback={null}>
+          <GameStage showOverlays={needsStage} />
+        </Suspense>
+      )}
 
       {state.phase === "menu" && (
         <StartScreen
@@ -66,13 +73,6 @@ function PrimordialApp() {
             { icon: "⟆", text: "Out-climb the lava" },
           ]}
         />
-      )}
-
-      {state.phase === "playing" && (
-        <>
-          <HUD />
-          <Crosshair />
-        </>
       )}
 
       {state.phase === "gameover" && (
