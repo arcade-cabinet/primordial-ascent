@@ -38,8 +38,15 @@ export function Player() {
   const raycastAccumRef = useRef(0);
   const lastGrappleHitRef = useRef<{ distance: number } | null>(null);
   const cameraDirectionRef = useRef(new THREE.Vector3());
-  const tetherStartRef = useRef(new THREE.Vector3());
-  const tetherLineGeometry = useMemo(() => new THREE.BufferGeometry(), []);
+  // Fixed 2-vertex buffer; rewritten in place each frame the tether is
+  // visible. Avoids `setFromPoints` which allocates new typed arrays and
+  // re-uploads the attribute every call.
+  const tetherPositionsRef = useRef<Float32Array>(new Float32Array(6));
+  const tetherLineGeometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(tetherPositionsRef.current, 3));
+    return geo;
+  }, []);
   const tetherLine = useMemo(
     () =>
       new THREE.Line(
@@ -80,8 +87,18 @@ export function Player() {
       if (state?.phase !== "playing") return;
 
       grappleAttempted.current = true;
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const intersects = raycaster.intersectObjects(scene.children, true);
+      raycaster.setFromCamera(_RAYCAST_CENTER, camera);
+      // Only raycast against meshes explicitly flagged raycastable (terrain
+      // chunks + platforms). Previously this traversed the entire scene
+      // graph — every anchor ring, beacon, shimmer — which is wasteful and
+      // can cause the acquire tap to stall on a busy frame.
+      const candidates: THREE.Object3D[] = [];
+      scene.traverse((obj) => {
+        if ((obj as THREE.Mesh).isMesh && obj.userData?.raycastable) {
+          candidates.push(obj);
+        }
+      });
+      const intersects = raycaster.intersectObjects(candidates, false);
       const hit = intersects.find(
         (i) => i.object.name === "terrain-chunk" && i.distance < CONFIG.maxTetherDist
       );
@@ -90,7 +107,8 @@ export function Player() {
 
       movement.current.grapple = true;
       setIsGrappling(true);
-      setGrapplePoint(hit.point);
+      // Clone: raycaster owns hit.point and mutates it on the next cast.
+      setGrapplePoint(hit.point.clone());
 
       if (rbRef.current) {
         const currentPos = rbRef.current.translation();
@@ -244,12 +262,16 @@ export function Player() {
       grappleTension = tether.tension;
       rbRef.current.applyImpulse(tether.impulse, true);
 
-      tetherStartRef.current.set(
-        position.current.x,
-        position.current.y - 0.5,
-        position.current.z
-      );
-      tetherLineGeometry.setFromPoints([tetherStartRef.current, grapplePoint]);
+      const positions = tetherPositionsRef.current;
+      positions[0] = position.current.x;
+      positions[1] = position.current.y - 0.5;
+      positions[2] = position.current.z;
+      positions[3] = grapplePoint.x;
+      positions[4] = grapplePoint.y;
+      positions[5] = grapplePoint.z;
+      const attr = tetherLineGeometry.getAttribute("position") as THREE.BufferAttribute;
+      attr.needsUpdate = true;
+      tetherLineGeometry.computeBoundingSphere();
     }
 
     const cameraDirection = cameraDirectionRef.current;
@@ -321,17 +343,20 @@ export function Player() {
   );
 }
 
+const HARNESS_OFFSET = new THREE.Vector3(0.38, -0.36, -1.08);
+
 function FirstPersonHarness({ isGrappling }: { isGrappling: boolean }) {
   const { camera } = useThree();
   const groupRef = useRef<THREE.Group>(null);
+  const offsetRef = useRef(new THREE.Vector3());
 
   useFrame(() => {
     if (isRuntimePaused()) return;
 
     if (!groupRef.current) return;
 
-    const offset = new THREE.Vector3(0.38, -0.36, -1.08).applyQuaternion(camera.quaternion);
-    groupRef.current.position.copy(camera.position).add(offset);
+    offsetRef.current.copy(HARNESS_OFFSET).applyQuaternion(camera.quaternion);
+    groupRef.current.position.copy(camera.position).add(offsetRef.current);
     groupRef.current.quaternion.copy(camera.quaternion);
   });
 

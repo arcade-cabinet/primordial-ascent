@@ -7,6 +7,29 @@ import { useEffect, useState } from "react";
 export function Crosshair() {
   const liveState = useTrait(primordialEntity, PrimordialTrait);
   const [isLocked, setIsLocked] = useState(false);
+  const inGrappleRange = liveState?.isInGrappleRange ?? false;
+
+  useEffect(() => {
+    const handlePointerDown = (e: MouseEvent) => {
+      if (e.button === 0 && inGrappleRange) {
+        setIsLocked(true);
+      }
+    };
+    const handlePointerUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        setIsLocked(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [inGrappleRange]);
+
   if (!liveState) return null;
   const state = liveState;
   const guide = state.grappleGuideCue;
@@ -30,27 +53,6 @@ export function Crosshair() {
           ? 24
           : 16;
   const reticleSize = Math.round(baseReticleSize * guide.reticleScale);
-
-  useEffect(() => {
-    const handlePointerDown = (e: MouseEvent) => {
-      if (e.button === 0 && state.isInGrappleRange) {
-        setIsLocked(true);
-      }
-    };
-    const handlePointerUp = (e: MouseEvent) => {
-      if (e.button === 0) {
-        setIsLocked(false);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("pointerup", handlePointerUp);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [state.isInGrappleRange]);
 
   return (
     <motion.div
