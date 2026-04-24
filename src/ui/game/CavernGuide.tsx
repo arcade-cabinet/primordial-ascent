@@ -43,11 +43,11 @@ export function CavernGuide() {
       {layout.platforms.map((platform) => (
         <RigidBody key={platform.id} type="fixed" colliders="cuboid" position={platform.position}>
           <group scale={platform.scale}>
-            <mesh name="terrain-chunk" position={[0, -0.14, 0]}>
+            <mesh name="terrain-chunk" userData={{ raycastable: true }} position={[0, -0.14, 0]}>
               <boxGeometry args={[1, 0.52, 1]} />
               <meshStandardMaterial color="#25303a" roughness={0.95} />
             </mesh>
-            <mesh name="terrain-chunk" position={[0, 0.16, 0]}>
+            <mesh name="terrain-chunk" userData={{ raycastable: true }} position={[0, 0.16, 0]}>
               <boxGeometry args={[0.96, 0.08, 0.96]} />
               <meshStandardMaterial
                 color={platform.accent}
@@ -80,7 +80,7 @@ export function CavernGuide() {
               <meshBasicMaterial color="#f0ffff" transparent opacity={0.46} toneMapped={false} />
             </mesh>
           ) : null}
-          <mesh name="terrain-chunk" rotation={[Math.PI / 2, 0, 0]}>
+          <mesh name="terrain-chunk" userData={{ raycastable: true }} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[anchor.radius, anchor.radius * 0.72, 0.32, 32]} />
             <meshStandardMaterial
               color="#06303a"
@@ -221,8 +221,6 @@ function GrappleGuideMarkers({
 function RouteBeaconTrail() {
   const layout = useMemo(() => createCavernLayout(), []);
   const liveState = useTrait(primordialEntity, PrimordialTrait);
-  if (!liveState) return null;
-  const state = liveState;
   const points = useMemo(() => {
     const route = [
       [0, 12, -8] as [number, number, number],
@@ -251,6 +249,9 @@ function RouteBeaconTrail() {
 
     return samples;
   }, [layout]);
+
+  if (!liveState) return null;
+  const state = liveState;
 
   return (
     <group>
