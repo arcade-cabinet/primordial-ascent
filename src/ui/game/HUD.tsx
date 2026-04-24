@@ -64,7 +64,7 @@ export function HUD() {
         }}
       />
       <div
-        className="fixed inset-0 z-10 pointer-events-none"
+        className="fixed inset-0 z-40 pointer-events-none"
         data-testid="hud"
         style={{
           display: "grid",
@@ -104,11 +104,10 @@ export function HUD() {
             style={{
               maxWidth: 520,
               border: "1px solid rgba(45, 212, 191, 0.28)",
-              background: "rgba(2, 6, 8, 0.72)",
+              background: "rgba(2, 6, 8, 0.88)",
               boxShadow: "0 14px 40px rgba(0, 0, 0, 0.32)",
               borderRadius: 8,
               padding: "0.7rem 0.8rem",
-              backdropFilter: "blur(10px)",
             }}
           >
             <div
@@ -259,12 +258,11 @@ function Metric({
       style={{
         minWidth: "min(8.6rem, 30vw)",
         border: "1px solid rgba(148, 163, 184, 0.22)",
-        background: "rgba(2, 6, 8, 0.68)",
+        background: "rgba(2, 6, 8, 0.82)",
         boxShadow: "0 14px 40px rgba(0, 0, 0, 0.3)",
         borderRadius: 8,
         padding: "0.65rem 0.72rem",
         textAlign: align,
-        backdropFilter: "blur(10px)",
       }}
     >
       <div
