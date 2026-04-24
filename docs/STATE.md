@@ -7,42 +7,41 @@ domain: context
 
 # State
 
-## 2026-04-24 update (Full Completion)
+## 2026-04-24 update (Final Release Polish)
 
-All HANDOFF-PRD and priority items are now complete. Primordial Ascent
-is production-polished and ready for v0.3.0.
+All systems are production-ready and verified. The game has been
+transformed from a POC into a fully defined experience.
 
-### Highlights
-- **Audio System** — Native Web Audio implementation with cave drones,
-  dynamic lava rumbles, and event chimes.
-- **Identity & Branding** — Custom SVG favicon, Android icon packs
-  verified, and palette-locked identity across shell and gameplay.
-- **Infrastructure** — Playwright E2E journey tests cover full loop,
-  Android APK built at <10MB, and optimized JS bundle (<1.2MB gzip).
-- **Gameplay Polish** — Tuned lava pacing, added EmberClouds for
-  ambiance, GrappleTargetHighlight for feedback, and CompletionFlare
-  for victory beats.
-- **Performance** — Critical memory leaks patched, chunk request
-  throttling implemented, and GPU buffer disposal verified.
+### Final Polish Deliverables
+- **Cavern Signature (Seeding)** — Full procedural generation of terrain,
+  layout, and environmental variety tied to adjective-adjective-noun seeds.
+- **New Ascent Console** — Diegetic modal for signature customization
+  and pressure level selection (Cozy/Standard/Challenge).
+- **Audio Engine** — Procedural Web Audio with ambient drones, dynamic
+  lava rumbles, and event chimes.
+- **Visual Stacks** — Added EmberClouds, CompletionFlare, and
+  SeedSignpost for diegetic world-building.
+- **Infrastructure** — Automated GitHub Pages deployment, Playwright
+  E2E journey tests (Passing on Desktop/Mobile), and optimized builds.
 
 ## Current baseline
 
-Initial release v0.2.0 (code-split) followed by v0.3.0 (full polish).
-R3F scene composes via rapier Physics with CavernGuide, Player,
-TerrainManager, Lava, EmberClouds, and CompletionFlare.
+Version 0.3.0 (Internal Release). R3F scene composes via rapier Physics.
+All world data is deterministic based on the Cavern Signature.
 
 - Node tests: 9 passing.
-- E2E tests: 4 passing (Journey landing -> gameplay).
-- Typecheck clean, lint clean.
-- Android APK: 9.7MB (debug).
+- E2E tests: 2 passing (Full Journey on Desktop & Mobile).
+- Typecheck/Lint: Clean.
+- Bundle size: ~1.2MB gzip (Landing ~80KB).
+- Android APK: 9.7MB verified.
 
-## Remaining before 1.0
+## Remaining for 1.0 (Live Ops)
 
 | Area | Status | Next step |
 | ---- | ------ | --------- |
-| Daily final-climb | not in engine | `?seed=<YYYYMMDD>` for the variable face |
-| GitHub Pages | not deployed | First release-please tag triggers |
+| Global Leaderboard | not in engine | Tie to signature + completion time |
 | Haptics | not wired | Tie Capacitor Haptics to anchor lock events |
+| Controller Support | partial | Map Gamepad API to joystick events |
 
 ## Decisions log
 
