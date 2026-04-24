@@ -1,6 +1,6 @@
 ---
 title: Design
-updated: 2026-04-23
+updated: 2026-04-24
 status: current
 domain: product
 ---
@@ -15,28 +15,29 @@ rising magma. The point is the *feel* of each catch on an anchor —
 the tension, the moment of rest, the choice of the next route.
 There is no score-chase, no combo; the reward is muscle memory.
 
-Three sectors per cavern, and every third run the final section is
-seeded differently so what you've learned gets tested against a
-face you haven't climbed before.
+Every ascent is unique, driven by a "Cavern Signature" that
+procedurally shapes the terrain, anchor placement, and visual
+atmosphere.
 
 ## Player journey
 
 1. **Land.** Oswald title in ember orange on volcanic void. Three
    verb chips: Grapple the ceilings / Rest on moss / Out-climb the
    lava. One CTA: Initiate Sequence.
-2. **Descend in.** Canvas fades in from void to a basalt cavern
-   interior. Camera locks to the first-person climber. The first
-   cyan anchor pulses above; the magma glow is still distant.
-3. **Swing.** Tap-to-aim, tap-to-fire hooks a cyan anchor, which
+2. **Signature.** Selecting the CTA opens the "New Ascent" console.
+   The player can accept a procedurally generated "Cavern Signature"
+   (e.g., Obsidian-Molten-Vault), request a new one, or toggle the
+   "Daily Challenge" signature tied to today's date.
+3. **Descend in.** Canvas fades in to a basalt cavern interior.
+   A holographic signpost displays the current Cavern Signature.
+   The first cyan anchor pulses above; the magma glow is distant.
+4. **Swing.** Tap-to-aim, tap-to-fire hooks a cyan anchor, which
    triggers a rapier-driven swing. Releasing mid-arc carries
    momentum to the next anchor.
-4. **Rest.** Landing on a moss ledge (green highlight) lets the
-   magma get closer — but only resting here restores the grapple
-   reserve.
-5. **Break through.** The final variable climb tests what you've
-   internalized: the familiar ceiling spacing is now a trickier
-   asymmetric pattern. Completion fades to "SURFACE BREACHED" in
-   limestone cream.
+5. **Rest.** Landing on a moss ledge (green highlight) allows a
+   moment of recovery, but the magma keeps rising.
+6. **Break through.** Completion triggers a surface flare and
+   fades to "SURFACE BREACHED" in limestone cream.
 
 ## Palette rationale
 
@@ -44,14 +45,17 @@ face you haven't climbed before.
   cast so the ember orange feels lit.
 - `#2a1c18` basalt — terrain + rock walls. Warm charcoal.
 - `#c75415` ember — the hero channel. Title, CTA, grapple
-  indicator, lava glow. Any ember is the player's target.
-- `#e8dcc0` limestone cream — moss highlight, completion title.
-  The "you're safe" color.
+  indicator. Any ember is the player's primary target or action.
+- `#00e5ff` / `#36fbd1` cyan/aquamarine — anchors. High-contrast
+  unnatural light source to guide the player's eye upward.
+- `#35d07f` / `#8bd450` moss — resting platforms. Cool greens
+  signifying safety and recovery.
+- `#e8dcc0` limestone cream — completion title. The "you're safe" color.
 - `#f2e8d9` parchment — body text.
 - `#a0907c` muted limestone — secondary labels.
-- `#ff375f` hazard red — rising magma tint, "CONSUMED BY MAGMA"
-  title. The only color that breaks the orange-cream palette, so
-  it registers as a consequence rather than decoration.
+- `#ff375f` / `#ff3333` hazard red — rising magma tint, defeat
+  title. The only color that breaks the orange-cream-cyan
+  triad, registering as a consequence rather than decoration.
 
 ## Fontography rationale
 
@@ -65,8 +69,6 @@ Both fall back to system fonts.
 
 ## Future work
 
-- Audio: cave drone, anchor lock click, rope creak, lava rumble.
-- Seeded daily final-climb challenge.
 - Haptics through Capacitor on successful anchor lock.
 - Alternative control schemes: tilt-steer, swipe-aim.
 - Cavern variant presets (vertical / wide / inverted).

@@ -1,6 +1,6 @@
 ---
 title: Architecture
-updated: 2026-04-23
+updated: 2026-04-24
 status: current
 domain: technical
 ---
@@ -20,13 +20,29 @@ Vite 8, framer-motion (chrome), simplex-noise + Web Worker
 input (touch/pointer) → Player.tsx (grapple + first-person)
   → rapier Physics step
     → primordialEntity.set(PrimordialTrait, next)
-      → useTrait subscribers re-render HUD + Crosshair + CavernGuide
-  ↑ TerrainManager streams chunks from the Worker every tick
+      → useTrait re-renders HUD + Crosshair + CavernGuide
+      → audioManager updates lava intensity + plays sfx
+  ↑ TerrainManager streams seeded chunks from the Worker
 ```
 
 The TerrainWorker generates chunks from seeded simplex noise and
 sends them back over `postMessage`. The main thread composes them
 into a single rapier trimesh each frame.
+
+## Core Systems
+
+### Seeding (Signature) System
+Every ascent is defined by a "Cavern Signature" (adjective-adjective-noun).
+This seed drives:
+- Voxel terrain generation (density + noise).
+- Cavern layout (anchor and platform placement).
+- World building variety (vein colors, lighting colors).
+
+### Audio System
+Lightweight manager (`src/engine/audio.ts`) using the native Web Audio API.
+- Deep sine-wave cave drone.
+- Dynamic sawtooth lava rumble (frequency and gain tie to lava distance).
+- Event chimes (grapple lock, surface breach) using procedural oscillators.
 
 ## Files you'll edit most
 

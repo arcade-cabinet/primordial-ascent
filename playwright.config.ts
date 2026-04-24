@@ -6,10 +6,14 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
+  reporter: "list",
   use: {
-    baseURL: "http://localhost:4173",
-    trace: "on-first-retry",
+    baseURL: "http://localhost:41734",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    launchOptions: {
+      args: ["--mute-audio", "--use-angle=gl", "--enable-webgl", "--ignore-gpu-blocklist"],
+    },
   },
   projects: [
     {
@@ -18,12 +22,12 @@ export default defineConfig({
     },
     {
       name: "mobile-chromium",
-      use: { ...devices["Pixel 7"] },
+      use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } },
     },
   ],
   webServer: {
-    command: "pnpm preview --port 4173",
-    url: "http://localhost:4173",
+    command: "pnpm preview --port 41734",
+    url: "http://localhost:41734",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

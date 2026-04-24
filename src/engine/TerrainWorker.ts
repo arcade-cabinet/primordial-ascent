@@ -1,8 +1,7 @@
 import { createNoise3D } from "simplex-noise";
 
-const noise3D = createNoise3D();
-
 export interface ChunkConfig {
+  seed: string;
   chunkSize: number;
   voxelSize: number;
   isoLevel: number;
@@ -21,6 +20,24 @@ export interface ChunkData {
 
 self.onmessage = (e: MessageEvent<{ cx: number; cy: number; cz: number; config: ChunkConfig }>) => {
   const { cx, cy, cz, config } = e.data;
+  
+  // Seeded random number generator for noise
+  let seedVal = 0;
+  const str = config.seed || "void";
+  for (let i = 0; i < str.length; i++) {
+    seedVal = (seedVal << 5) - seedVal + str.charCodeAt(i);
+    seedVal |= 0;
+  }
+  
+  const random = () => {
+    seedVal = (seedVal + 0x6d2b79f5) | 0;
+    let t = Math.imul(seedVal ^ (seedVal >>> 15), 1 | seedVal);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) | 0;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  const noise3D = createNoise3D(random);
+  
   const size = config.chunkSize;
   const vs = config.voxelSize;
   const scale = config.noiseScale;
@@ -159,6 +176,9 @@ self.onmessage = (e: MessageEvent<{ cx: number; cy: number; cz: number; config: 
           const colorNoise = noise3D(wx * 0.03, wy * 0.03, wz * 0.03);
           const isVein = colorNoise > 0.65;
 
+          // Seed-based vein color
+          const veinHue = (config.seed.split("").reduce((a, b) => a + b.charCodeAt(0), 0) % 360) / 360;
+          
           for (let f = 0; f < 6; f++) {
             const face = faces[f];
             if (
@@ -171,9 +191,23 @@ self.onmessage = (e: MessageEvent<{ cx: number; cy: number; cz: number; config: 
                 a = 1.0;
 
               if (isVein) {
-                fr = 0.0;
-                fg = 0.4;
-                fb = 0.3;
+                // Procedural color based on hue
+                const h = veinHue;
+                const s = 0.8;
+                const l = 0.5;
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                const hue2rgb = (t: number) => {
+                  if (t < 0) t += 1;
+                  if (t > 1) t -= 1;
+                  if (t < 1/6) return p + (q - p) * 6 * t;
+                  if (t < 1/2) return q;
+                  if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                  return p;
+                };
+                fr = hue2rgb(h + 1/3);
+                fg = hue2rgb(h);
+                fb = hue2rgb(h - 1/3);
               }
 
               if (face.dir[1] === 1) {
