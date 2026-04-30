@@ -39,7 +39,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/oswald": "^5.2.8",
     "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.3.1",
+    "@react-three/fiber": "^9.6.1",
     "@react-three/rapier": "^2.1.0",
     "framer-motion": "^12.38.0",
     "koota": "^0.6.6",
